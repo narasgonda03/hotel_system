@@ -12,11 +12,24 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String customerName;
+    // Customer link
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "customer_id", nullable = true)
+    private Customer customer;
+
+    // Table link — कोणत्या table चा order
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "table_id", nullable = true)
+    private HotelTable table;
+
     private double totalAmount;
     private LocalDateTime orderTime;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    // Order Status Flow: PENDING → PREPARING → SERVED → PAID
+    private String status = "PENDING";
+
+    // Order Items — Bill मध्ये दाखवण्यासाठी JsonIgnore काढला
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<OrderItem> items;
 
     public Order() {
@@ -25,8 +38,11 @@ public class Order {
 
     public Long getId() { return id; }
 
-    public String getCustomerName() { return customerName; }
-    public void setCustomerName(String customerName) { this.customerName = customerName; }
+    public Customer getCustomer() { return customer; }
+    public void setCustomer(Customer customer) { this.customer = customer; }
+
+    public HotelTable getTable() { return table; }
+    public void setTable(HotelTable table) { this.table = table; }
 
     public double getTotalAmount() { return totalAmount; }
     public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
@@ -35,4 +51,7 @@ public class Order {
 
     public List<OrderItem> getItems() { return items; }
     public void setItems(List<OrderItem> items) { this.items = items; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

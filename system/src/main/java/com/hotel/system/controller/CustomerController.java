@@ -2,8 +2,9 @@ package com.hotel.system.controller;
 
 import com.hotel.system.entity.Customer;
 import com.hotel.system.service.CustomerService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -17,28 +18,47 @@ public class CustomerController {
         this.service = service;
     }
 
-    // Add customer
+    // Add Customer
     @PostMapping("/add")
-    public Customer addCustomer(@RequestBody Customer c) {
-        return service.addCustomer(c);
+    public ResponseEntity<Customer> addCustomer(@RequestBody Customer c) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.addCustomer(c));
     }
 
-    // Get all customers
+    // Get All Customers
     @GetMapping("/all")
     public List<Customer> getCustomers() {
         return service.getAllCustomers();
     }
 
-    // Get by id
+    // Get By ID
     @GetMapping("/{id}")
-    public Customer getCustomer(@PathVariable Long id) {
-        return service.getCustomerById(id);
+    public ResponseEntity<?> getCustomer(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(service.getCustomerById(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 
-    // Delete customer
+    // Update Customer
+    @PutMapping("/update/{id}")
+    public ResponseEntity<?> updateCustomer(@PathVariable Long id,
+                                            @RequestBody Customer customer) {
+        try {
+            return ResponseEntity.ok(service.updateCustomer(id, customer));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    // Delete Customer
     @DeleteMapping("/{id}")
-    public String deleteCustomer(@PathVariable Long id) {
-        service.deleteCustomer(id);
-        return "Customer deleted successfully";
+    public ResponseEntity<String> deleteCustomer(@PathVariable Long id) {
+        try {
+            service.deleteCustomer(id);
+            return ResponseEntity.ok("Customer deleted successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 }
