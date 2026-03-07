@@ -2,58 +2,72 @@ package com.hotel.system.service;
 
 import com.hotel.system.entity.Admin;
 import com.hotel.system.repository.AdminRepository;
-import com.hotel.system.security.JwtUtil;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AdminService {
 
     private final AdminRepository adminRepository;
-    private final JwtUtil jwtUtil;
-    private final PasswordEncoder passwordEncoder; // BCrypt
 
-    public AdminService(AdminRepository adminRepository,
-                        JwtUtil jwtUtil,
-                        PasswordEncoder passwordEncoder) {
+    public AdminService(AdminRepository adminRepository) {
         this.adminRepository = adminRepository;
-        this.jwtUtil = jwtUtil;
-        this.passwordEncoder = passwordEncoder;
     }
 
-    // Admin Register — Password BCrypt encrypt होईल
+    // Register
     public Admin register(Admin admin) {
-        // Plain password → BCrypt encrypted password
-        admin.setPassword(passwordEncoder.encode(admin.getPassword()));
+        if (admin.getRole() == null || admin.getRole().isEmpty()) {
+            admin.setRole("ADMIN");
+        }
         return adminRepository.save(admin);
     }
 
-    // Admin Login — BCrypt verify होईल
-    public String login(Admin admin) {
+    // Login — returns { token, role, name, id }
+    public Map<String, String> login(Admin admin) {
         Admin existing = adminRepository.findByEmail(admin.getEmail());
 
         if (existing == null) {
-            throw new RuntimeException("Invalid email or password");
+            throw new RuntimeException("Email not found!");
+        }
+        if (!existing.getPassword().equals(admin.getPassword())) {
+            throw new RuntimeException("Invalid password!");
         }
 
-        // BCrypt password match check
-        if (!passwordEncoder.matches(admin.getPassword(), existing.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
-        }
+        String token = "token_" + existing.getId() + "_" + existing.getRole();
 
-        // Token generate करणे
-        return jwtUtil.generateToken(existing.getEmail());
+        Map<String, String> response = new HashMap<>();
+        response.put("token", token);
+        response.put("role", existing.getRole());
+        response.put("name", existing.getName());
+        response.put("id", existing.getId().toString());
+
+        return response;
     }
 
-    // सगळे Admins
+    // Get all staff
     public List<Admin> getAllAdmins() {
         return adminRepository.findAll();
     }
 
-    // Admin Delete
+    // Update staff
+    public Admin updateAdmin(Long id, Admin updated) {
+        Admin existing = adminRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Staff not found: " + id));
+        existing.setName(updated.getName());
+        existing.setEmail(updated.getEmail());
+        existing.setRole(updated.getRole());
+        if (updated.getPassword() != null && !updated.getPassword().isEmpty()) {
+            existing.setPassword(updated.getPassword());
+        }
+        return adminRepository.save(existing);
+    }
+
+    // Delete staff
     public String deleteAdmin(Long id) {
         adminRepository.deleteById(id);
-        return "Admin deleted successfully";
+        return "Staff deleted successfully";
     }
 }

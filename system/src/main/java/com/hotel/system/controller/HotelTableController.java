@@ -2,55 +2,79 @@ package com.hotel.system.controller;
 
 import com.hotel.system.entity.HotelTable;
 import com.hotel.system.service.HotelTableService;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/tables")
-@CrossOrigin("*")
+@CrossOrigin(origins = "*")
 public class HotelTableController {
 
-    private final HotelTableService service;
+    @Autowired
+    private HotelTableService hotelTableService;
 
-    public HotelTableController(HotelTableService service) {
-        this.service = service;
-    }
-
-    // Add Table
-    @PostMapping("/add")
-    public ResponseEntity<HotelTable> addTable(@RequestBody HotelTable table) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.addTable(table));
-    }
-
-    // Get All Tables
+    // GET /tables/all
     @GetMapping("/all")
-    public List<HotelTable> getAllTables() {
-        return service.getAllTables();
+    public ResponseEntity<List<HotelTable>> getAllTables() {
+        return ResponseEntity.ok(hotelTableService.getAllTables());
     }
 
-    // Get Available Tables
-    @GetMapping("/available")
-    public List<HotelTable> getAvailableTables() {
-        return service.getAvailableTables();
+    // GET /tables/floor/{floorName}
+    @GetMapping("/floor/{floorName}")
+    public ResponseEntity<List<HotelTable>> getByFloor(@PathVariable String floorName) {
+        return ResponseEntity.ok(hotelTableService.getTablesByFloor(floorName));
     }
 
-    // Update Table Status
-    @PutMapping("/status/{id}")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
+    // GET /tables/{id}
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getById(@PathVariable Long id) {
+        return hotelTableService.getById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // POST /tables/add
+    @PostMapping("/add")
+    public ResponseEntity<?> addTable(@RequestBody HotelTable table) {
         try {
-            return ResponseEntity.ok(service.updateStatus(id, status));
+            HotelTable saved = hotelTableService.addTable(table);
+            return ResponseEntity.status(201).body(saved);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    // Delete Table
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteTable(@PathVariable Long id) {
+    // PUT /tables/update/{id}
+    @PutMapping("/update/{id}")
+    public ResponseEntity<?> updateTable(@PathVariable Long id, @RequestBody HotelTable table) {
         try {
-            return ResponseEntity.ok(service.deleteTable(id));
+            return ResponseEntity.ok(hotelTableService.updateTable(id, table));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // PUT /tables/status/{id}?status=OCCUPIED
+    @PutMapping("/status/{id}")
+    public ResponseEntity<?> updateStatus(
+            @PathVariable Long id,
+            @RequestParam HotelTable.TableStatus status) {
+        try {
+            return ResponseEntity.ok(hotelTableService.updateStatus(id, status));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // DELETE /tables/delete/{id}
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<?> deleteTable(@PathVariable Long id) {
+        try {
+            hotelTableService.deleteTable(id);
+            return ResponseEntity.ok("Table deleted successfully!");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

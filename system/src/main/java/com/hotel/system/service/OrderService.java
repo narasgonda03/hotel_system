@@ -46,11 +46,14 @@ public class OrderService {
             HotelTable table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new RuntimeException("Table not found: " + request.getTableId()));
 
-            if (table.getStatus().equals("OCCUPIED")) {
+            // ✅ FIX: String नाही — enum compare करायचं आहे
+            // ✅ LINE 49 FIX: String.equals() नाही — enum == compare
+            if (table.getStatus() == HotelTable.TableStatus.OCCUPIED) {
                 throw new RuntimeException("Table " + table.getTableNumber() + " is already occupied!");
             }
 
-            table.setStatus("OCCUPIED");
+            // ✅ FIX: String नाही — enum set करायचं आहे
+            table.setStatus(HotelTable.TableStatus.OCCUPIED);
             tableRepository.save(table);
             order.setTable(table);
         }
@@ -102,39 +105,36 @@ public class OrderService {
 
         order.setStatus(status);
 
-        // PAID झाल्यावर Table AVAILABLE होते
+        // ✅ FIX: PAID झाल्यावर Table AVAILABLE — enum use
         if (status.equals("PAID") && order.getTable() != null) {
             HotelTable table = order.getTable();
-            table.setStatus("AVAILABLE");
+            table.setStatus(HotelTable.TableStatus.AVAILABLE);
             tableRepository.save(table);
         }
 
         return orderRepository.save(order);
     }
 
-    // CANCEL ORDER — फक्त PENDING order cancel करता येईल
+    // CANCEL ORDER
     public String cancelOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
 
-        // PAID order cancel करता येणार नाही
         if (order.getStatus().equals("PAID")) {
             throw new RuntimeException("Cannot cancel a PAID order!");
         }
 
-        // SERVED order cancel करता येणार नाही
         if (order.getStatus().equals("SERVED")) {
             throw new RuntimeException("Cannot cancel a SERVED order!");
         }
 
-        // Table AVAILABLE करणे
+        // ✅ FIX: Table AVAILABLE — enum use
         if (order.getTable() != null) {
             HotelTable table = order.getTable();
-            table.setStatus("AVAILABLE");
+            table.setStatus(HotelTable.TableStatus.AVAILABLE);
             tableRepository.save(table);
         }
 
-        // Order CANCELLED mark करणे
         order.setStatus("CANCELLED");
         orderRepository.save(order);
 
