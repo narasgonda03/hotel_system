@@ -8,9 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
+// FIX #5: @CrossOrigin("*") काढला — CorsConfig.java globally handle करतो
+// कोणत्याही website वरून API call होऊ नये म्हणून
 @RestController
 @RequestMapping("/order")
-@CrossOrigin("*")
 public class OrderController {
 
     private final OrderService service;
@@ -64,6 +65,19 @@ public class OrderController {
     @GetMapping("/kitchen")
     public List<Order> getKitchenOrders() {
         return service.getPendingOrders();
+    }
+
+    // FIX #11: Kitchen साठी वेगळे endpoints — /order/all fetch करणे बंद
+    // PREPARING orders — kitchen मध्ये बनत आहेत
+    @GetMapping("/kitchen/preparing")
+    public List<Order> getPreparingOrders() {
+        return service.getPreparingOrders();
+    }
+
+    // SERVED orders — serve झाले, payment pending
+    @GetMapping("/kitchen/served")
+    public List<Order> getServedOrders() {
+        return service.getServedOrders();
     }
 
     // Customer Order History

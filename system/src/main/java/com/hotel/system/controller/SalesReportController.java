@@ -9,7 +9,7 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/report")
-@CrossOrigin("*")
+// FIX #5: @CrossOrigin("*") काढला — CorsConfig.java globally handle करतो
 public class SalesReportController {
 
     private final SalesReportService reportService;

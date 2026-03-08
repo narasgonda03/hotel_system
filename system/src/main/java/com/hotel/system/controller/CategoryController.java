@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/categories")
-@CrossOrigin("*")
+// FIX #5: @CrossOrigin("*") काढला — CorsConfig.java globally handle करतो
 public class CategoryController {
 
     private final CategoryService service;

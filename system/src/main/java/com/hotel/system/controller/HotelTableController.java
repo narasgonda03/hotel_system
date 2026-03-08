@@ -3,6 +3,7 @@ package com.hotel.system.controller;
 import com.hotel.system.entity.HotelTable;
 import com.hotel.system.service.HotelTableService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/tables")
-@CrossOrigin(origins = "*")
+// FIX #5: @CrossOrigin(origins = "*") काढला — CorsConfig.java globally handle करतो
 public class HotelTableController {
 
     @Autowired
@@ -75,6 +76,10 @@ public class HotelTableController {
         try {
             hotelTableService.deleteTable(id);
             return ResponseEntity.ok("Table deleted successfully!");
+        } catch (DataIntegrityViolationException e) {
+            // FIX: DB level foreign key constraint — clear message पाठवणे
+            return ResponseEntity.badRequest()
+                    .body("Cannot delete! This table has linked orders in history.");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

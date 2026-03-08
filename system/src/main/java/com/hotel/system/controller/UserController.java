@@ -10,7 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
-@CrossOrigin("*")
+// FIX #5: @CrossOrigin("*") काढला — CorsConfig.java globally handle करतो
 public class UserController {
 
     private final UserService service;

@@ -2,6 +2,7 @@ package com.hotel.system.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -10,8 +11,11 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    // Secret Key — हा कोणाला सांगू नका!
-    private final String SECRET = "hotel_system_secret_key_very_long_and_secure_2026";
+    // FIX #2: Secret key hardcoded नाही — application.properties मधून येतो
+    // Production मध्ये environment variable JWT_SECRET set करा
+    @Value("${jwt.secret:hotel_system_secret_key_very_long_and_secure_2026_default}")
+    private String SECRET;
+
     private final long EXPIRATION = 1000 * 60 * 60 * 10; // 10 तास
 
     private Key getSigningKey() {

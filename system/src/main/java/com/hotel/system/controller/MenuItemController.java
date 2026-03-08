@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/menu")
-@CrossOrigin("*")
+// FIX #5: @CrossOrigin("*") काढला — CorsConfig.java globally handle करतो
 public class MenuItemController {
 
     private final MenuItemService service;
@@ -51,6 +51,16 @@ public class MenuItemController {
                                         @RequestBody MenuItemRequest request) {
         try {
             return ResponseEntity.ok(service.updateItem(id, request));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // FIX: TOGGLE AVAILABILITY — /menu/toggle/{id}
+    @PutMapping("/toggle/{id}")
+    public ResponseEntity<?> toggleAvailable(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(service.toggleAvailable(id));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

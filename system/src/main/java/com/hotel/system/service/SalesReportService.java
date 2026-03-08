@@ -45,7 +45,8 @@ public class SalesReportService {
         double totalRevenue = 0;
 
         // Item wise count करण्यासाठी map
-        Map<String, int[]> itemMap = new HashMap<>();
+        // FIX #8: int[] ऐवजी double[] — decimal revenue truncate होऊ नये (₹150.50 → ₹150 चुकीचे होते)
+        Map<String, double[]> itemMap = new HashMap<>();
         // itemMap = { "Paneer Tikka": [quantity, revenue] }
 
         for (Order order : orders) {
@@ -65,10 +66,12 @@ public class SalesReportService {
                     double rev = item.getPrice();
 
                     if (itemMap.containsKey(itemName)) {
+                        // FIX #8: double[] — revenue अचूक accumulate होतो
                         itemMap.get(itemName)[0] += qty;
-                        itemMap.get(itemName)[1] += (int) rev;
+                        itemMap.get(itemName)[1] += rev;
                     } else {
-                        itemMap.put(itemName, new int[]{qty, (int) rev});
+                        // FIX #8: double[] — (int) cast काढला
+                        itemMap.put(itemName, new double[]{qty, rev});
                     }
                 }
             }
@@ -80,11 +83,11 @@ public class SalesReportService {
 
         // Top Items list तयार करणे
         List<SalesReportResponse.TopItem> topItems = new ArrayList<>();
-        for (Map.Entry<String, int[]> entry : itemMap.entrySet()) {
+        for (Map.Entry<String, double[]> entry : itemMap.entrySet()) {
             topItems.add(new SalesReportResponse.TopItem(
                     entry.getKey(),
-                    entry.getValue()[0],
-                    entry.getValue()[1]
+                    (int) entry.getValue()[0],  // quantity int राहतो
+                    entry.getValue()[1]          // FIX #8: revenue double — अचूक value
             ));
         }
 

@@ -79,6 +79,14 @@ public class MenuItemService {
         return menuRepo.save(item);
     }
 
+    // FIX: TOGGLE AVAILABILITY — Available to Unavailable and vice versa
+    public MenuItem toggleAvailable(Long id) {
+        MenuItem item = menuRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("MenuItem not found with id: " + id));
+        item.setAvailable(!item.isAvailable());
+        return menuRepo.save(item);
+    }
+
     // DELETE MENU ITEM
     public String deleteItem(Long id) {
         if (!menuRepo.existsById(id)) {

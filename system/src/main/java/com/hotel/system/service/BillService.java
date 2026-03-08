@@ -24,6 +24,11 @@ public class BillService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
 
+        // FIX #16: CANCELLED order चा bill generate होऊ नये
+        if ("CANCELLED".equals(order.getStatus())) {
+            throw new RuntimeException("Cannot generate bill for a CANCELLED order!");
+        }
+
         BillResponse bill = new BillResponse();
 
         // Order details

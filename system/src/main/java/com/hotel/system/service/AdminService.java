@@ -2,6 +2,8 @@ package com.hotel.system.service;
 
 import com.hotel.system.entity.Admin;
 import com.hotel.system.repository.AdminRepository;
+import com.hotel.system.security.JwtUtil;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -12,9 +14,16 @@ import java.util.Map;
 public class AdminService {
 
     private final AdminRepository adminRepository;
+    // FIX #1: PasswordEncoder आणि JwtUtil inject केले — BCrypt + Real JWT साठी
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public AdminService(AdminRepository adminRepository) {
+    public AdminService(AdminRepository adminRepository,
+                        PasswordEncoder passwordEncoder,
+                        JwtUtil jwtUtil) {
         this.adminRepository = adminRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
     // Register
@@ -22,6 +31,8 @@ public class AdminService {
         if (admin.getRole() == null || admin.getRole().isEmpty()) {
             admin.setRole("ADMIN");
         }
+        // FIX #1a: Password BCrypt ने encrypt करणे (आधी plain text save होत होतो)
+        admin.setPassword(passwordEncoder.encode(admin.getPassword()));
         return adminRepository.save(admin);
     }
 
@@ -30,13 +41,15 @@ public class AdminService {
         Admin existing = adminRepository.findByEmail(admin.getEmail());
 
         if (existing == null) {
-            throw new RuntimeException("Email not found!");
+            throw new RuntimeException("Invalid email or password!");
         }
-        if (!existing.getPassword().equals(admin.getPassword())) {
-            throw new RuntimeException("Invalid password!");
+        // FIX #1b: BCrypt password check — आधी plain text equals() होते
+        if (!passwordEncoder.matches(admin.getPassword(), existing.getPassword())) {
+            throw new RuntimeException("Invalid email or password!");
         }
 
-        String token = "token_" + existing.getId() + "_" + existing.getRole();
+        // FIX #1c: Real JWT token generate — आधी "token_1_ADMIN" असा fake token होता
+        String token = jwtUtil.generateToken(existing.getEmail());
 
         Map<String, String> response = new HashMap<>();
         response.put("token", token);
@@ -60,7 +73,8 @@ public class AdminService {
         existing.setEmail(updated.getEmail());
         existing.setRole(updated.getRole());
         if (updated.getPassword() != null && !updated.getPassword().isEmpty()) {
-            existing.setPassword(updated.getPassword());
+            // FIX #1d: Update वेळी पण password encrypt करणे
+            existing.setPassword(passwordEncoder.encode(updated.getPassword()));
         }
         return adminRepository.save(existing);
     }

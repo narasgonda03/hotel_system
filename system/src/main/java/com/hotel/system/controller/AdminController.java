@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+// FIX #5: @CrossOrigin("*") काढला — CorsConfig.java globally handle करतो
 @RestController
 @RequestMapping("/admin")
-@CrossOrigin("*")
 public class AdminController {
 
     private final AdminService service;

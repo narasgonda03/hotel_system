@@ -2,7 +2,9 @@ package com.hotel.system.service;
 
 import com.hotel.system.entity.HotelTable;
 import com.hotel.system.repository.HotelTableRepository;
+import com.hotel.system.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +15,9 @@ public class HotelTableService {
 
     @Autowired
     private HotelTableRepository hotelTableRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     // Add table — unique check per floor
     public HotelTable addTable(HotelTable table) {
@@ -79,6 +84,23 @@ public class HotelTableService {
         if (!hotelTableRepository.existsById(id)) {
             throw new RuntimeException("Table not found with id: " + id);
         }
-        hotelTableRepository.deleteById(id);
+
+        // FIX: Table delete करण्याआधी orders check — Foreign Key constraint टाळणे
+        long orderCount = orderRepository.findByTableId(id).size();
+        if (orderCount > 0) {
+            throw new RuntimeException(
+                    "Cannot delete! Table has " + orderCount + " order(s) linked. " +
+                            "Only tables with no order history can be deleted."
+            );
+        }
+
+        try {
+            hotelTableRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            // Extra safety — DB level constraint
+            throw new RuntimeException(
+                    "Cannot delete! This table has linked orders in the database."
+            );
+        }
     }
 }

@@ -5,9 +5,9 @@ import com.hotel.system.service.BillService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+// FIX #5: @CrossOrigin("*") काढला — CorsConfig.java globally handle करतो
 @RestController
 @RequestMapping("/bill")
-@CrossOrigin("*")
 public class BillController {
 
     private final BillService billService;

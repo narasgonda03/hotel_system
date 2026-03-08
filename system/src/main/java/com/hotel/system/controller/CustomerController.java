@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/customers")
-@CrossOrigin("*")
+// FIX #5: @CrossOrigin("*") काढला — CorsConfig.java globally handle करतो
 public class CustomerController {
 
     private final CustomerService service;

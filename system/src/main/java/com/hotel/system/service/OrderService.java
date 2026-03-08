@@ -4,6 +4,7 @@ import com.hotel.system.dto.OrderRequest;
 import com.hotel.system.entity.*;
 import com.hotel.system.repository.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +26,9 @@ public class OrderService {
         this.tableRepository = tableRepository;
     }
 
-    // ORDER CREATE
+    // FIX #7: @Transactional — Order create + Table status update एकाच transaction मध्ये
+    // जर कुठेही error आला तर दोन्ही rollback होतील — data inconsistency नाही
+    @Transactional
     public Order createOrder(OrderRequest request) {
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
@@ -46,13 +49,10 @@ public class OrderService {
             HotelTable table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new RuntimeException("Table not found: " + request.getTableId()));
 
-            // ✅ FIX: String नाही — enum compare करायचं आहे
-            // ✅ LINE 49 FIX: String.equals() नाही — enum == compare
             if (table.getStatus() == HotelTable.TableStatus.OCCUPIED) {
                 throw new RuntimeException("Table " + table.getTableNumber() + " is already occupied!");
             }
 
-            // ✅ FIX: String नाही — enum set करायचं आहे
             table.setStatus(HotelTable.TableStatus.OCCUPIED);
             tableRepository.save(table);
             order.setTable(table);
@@ -65,6 +65,11 @@ public class OrderService {
 
             if (itemReq.getMenuItemId() == null) {
                 throw new RuntimeException("menuItemId cannot be null");
+            }
+
+            // FIX #14: Quantity validation — zero किंवा negative quantity allow नाही
+            if (itemReq.getQuantity() <= 0) {
+                throw new RuntimeException("Quantity must be at least 1 for each item");
             }
 
             MenuItem menuItem = menuItemRepository.findById(itemReq.getMenuItemId())
@@ -98,14 +103,22 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
     }
 
-    // ORDER STATUS UPDATE
+    // FIX #6: Order Status Transition Validation — invalid transitions block करा
+    // Valid flow: PENDING → PREPARING → SERVED → PAID
+    // FIX #7: @Transactional — status + table update एकाच transaction मध्ये
+    @Transactional
     public Order updateOrderStatus(Long orderId, String status) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
+        String currentStatus = order.getStatus();
+
+        // FIX #6: Valid status transitions enforce करणे
+        validateStatusTransition(currentStatus, status);
+
         order.setStatus(status);
 
-        // ✅ FIX: PAID झाल्यावर Table AVAILABLE — enum use
+        // PAID झाल्यावर Table AVAILABLE — enum use
         if (status.equals("PAID") && order.getTable() != null) {
             HotelTable table = order.getTable();
             table.setStatus(HotelTable.TableStatus.AVAILABLE);
@@ -115,7 +128,37 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    // CANCEL ORDER
+    // FIX #6: Status transition rules define केल्या
+    private void validateStatusTransition(String current, String next) {
+        boolean valid = false;
+        switch (current) {
+            case "PENDING":
+                // PENDING → PREPARING (Kitchen flow)
+                // PENDING → PAID (Cashier directly collects — Bill page)
+                // PENDING → CANCELLED (Cancel order)
+                valid = next.equals("PREPARING") || next.equals("PAID") || next.equals("CANCELLED");
+                break;
+            case "PREPARING":
+                // PREPARING → SERVED (Kitchen done)
+                // PREPARING → PAID (Direct payment)
+                valid = next.equals("SERVED") || next.equals("PAID");
+                break;
+            case "SERVED":
+                // SERVED → PAID (Cashier collects payment)
+                valid = next.equals("PAID");
+                break;
+            case "PAID":
+            case "CANCELLED":
+                valid = false; // Final states — change नाही होणार
+                break;
+        }
+        if (!valid) {
+            throw new RuntimeException("Invalid status transition: " + current + " → " + next);
+        }
+    }
+
+    // FIX #7: @Transactional — cancel + table update एकाच transaction मध्ये
+    @Transactional
     public String cancelOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
@@ -128,7 +171,6 @@ public class OrderService {
             throw new RuntimeException("Cannot cancel a SERVED order!");
         }
 
-        // ✅ FIX: Table AVAILABLE — enum use
         if (order.getTable() != null) {
             HotelTable table = order.getTable();
             table.setStatus(HotelTable.TableStatus.AVAILABLE);
@@ -144,6 +186,16 @@ public class OrderService {
     // KITCHEN VIEW — PENDING orders
     public List<Order> getPendingOrders() {
         return orderRepository.findByStatus("PENDING");
+    }
+
+    // FIX #11: Kitchen साठी PREPARING orders — वेगळा method
+    public List<Order> getPreparingOrders() {
+        return orderRepository.findByStatus("PREPARING");
+    }
+
+    // FIX #11: Kitchen साठी SERVED orders — वेगळा method
+    public List<Order> getServedOrders() {
+        return orderRepository.findByStatus("SERVED");
     }
 
     // CUSTOMER ORDER HISTORY
